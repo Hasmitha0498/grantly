@@ -6,7 +6,8 @@ GRANTLY helps a final-year Indian undergraduate (or recent graduate) planning a 
 
 > **Demo data:** every scholarship, provider, university and program in this build is **fictional**. Nothing here is a real scholarship offer. The sample student "Aisha" is fictional and editable.
 
-- Live app: _see the submission form. The deployment is created by the repo owner._
+- Live app: https://grantly-snowy.vercel.app
+- Source: https://github.com/Hasmitha0498/grantly
 - Persistence: **Demo mode, saved on this device** (versioned `localStorage`). No account and no server.
 
 ## The problem
@@ -82,6 +83,19 @@ No environment variables are required. `.env.example` lists the optional cloud v
 | `npm run build` | Production build |
 | `npm run test:e2e` | 15 Playwright tests on the production build: full demo journey, profile→fit recompute, search/filter/bookmark, compare/priority/budget, idempotent start + submission, deep links/back/forward, onboarding validation + focus, follow-up timing, inert HTML injection, no overflow at 320/375/768/1024/1440px, axe on 10 routes |
 | `npm run test:a11y` | Only the axe test |
+
+## Verified results (7 Nov 2026)
+
+- Local: typecheck, lint, 86/86 unit tests, build, 15/15 E2E and `npm audit --omit=dev` (0 vulnerabilities) all pass.
+- Production (https://grantly-snowy.vercel.app): 15/15 E2E pass with `E2E_BASE_URL=https://grantly-snowy.vercel.app npm run test:e2e`.
+- Lighthouse 12, default mobile emulation, single run from a local machine against production:
+
+| Page | Performance | Accessibility | Best practices | LCP | CLS | TBT |
+|---|---|---|---|---|---|---|
+| `/` | 98 | 100 | 100 | 2.4 s | 0 | 0 ms |
+| `/discover` | 99 | 100 | 100 | 2.0 s | 0 | 20 ms |
+
+INP is a field metric and was not measured. Screenshots are in `docs/screenshots/`.
 
 ## Accessibility and security
 

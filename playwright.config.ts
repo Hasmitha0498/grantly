@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 3107;
+const remote = process.env.E2E_BASE_URL;
 
 export default defineConfig({
   testDir: './e2e',
@@ -8,14 +9,16 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
-    baseURL: `http://localhost:${PORT}`,
+    baseURL: remote ?? `http://localhost:${PORT}`,
     trace: 'retain-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
-    command: `npm run start -- -p ${PORT}`,
-    url: `http://localhost:${PORT}`,
-    reuseExistingServer: true,
-    timeout: 60_000,
-  },
+  webServer: remote
+    ? undefined
+    : {
+        command: `npm run start -- -p ${PORT}`,
+        url: `http://localhost:${PORT}`,
+        reuseExistingServer: true,
+        timeout: 60_000,
+      },
 });
