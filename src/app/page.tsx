@@ -28,17 +28,17 @@ export default function WelcomePage() {
         <figure aria-label="Example: comparing two programs" className="card relative overflow-hidden p-6 shadow-[0_20px_50px_-30px_rgba(25,77,67,0.45)]">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted">Example from the sample journey</p>
           <p className="mt-2 font-display text-lg font-semibold">The biggest award isn’t always the most affordable path.</p>
-          <dl className="mt-5 space-y-4">
+          <ul className="mt-5 space-y-4">
             {[
               { name: 'Program A', cost: 90, award: 30, left: 60 },
               { name: 'Program B', cost: 70, award: 20, left: 50 },
             ].map((p) => (
-              <div key={p.name}>
-                <div className="flex justify-between text-sm">
-                  <dt className="font-semibold">{p.name}</dt>
-                  <dd className="text-muted">
+              <li key={p.name}>
+                <div className="flex flex-wrap justify-between gap-x-3 text-sm">
+                  <span className="font-semibold">{p.name}</span>
+                  <span className="text-muted">
                     ${p.cost}k cost · ${p.award}k potential award
-                  </dd>
+                  </span>
                 </div>
                 <div className="mt-2 flex h-3 overflow-hidden rounded-full bg-mint" aria-hidden="true">
                   <div className="bg-forest" style={{ width: `${(p.left / 90) * 100}%` }} />
@@ -47,9 +47,9 @@ export default function WelcomePage() {
                 <p className="mt-1 text-sm">
                   <strong>${p.left}k</strong> left to pay if awarded
                 </p>
-              </div>
+              </li>
             ))}
-          </dl>
+          </ul>
           <p className="mt-5 flex items-center gap-1 text-sm font-semibold text-forest">
             Program B leaves $10k less to pay <ArrowRight aria-hidden="true" size={15} />
           </p>

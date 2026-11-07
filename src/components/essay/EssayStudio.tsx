@@ -122,13 +122,27 @@ function Studio({ app, prompt, saved, state }: { app: Application; prompt: Essay
     timer.current = setTimeout(() => save(), 800);
   };
 
+  // Flush pending edits when the page is hidden or unloaded; warn only if persistence failed.
   useEffect(() => {
+    const flush = () => {
+      if (dirty.current && timer.current) save();
+    };
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (dirty.current && status !== 'saving') e.preventDefault();
+      flush();
+      if (dirty.current) e.preventDefault();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
     };
     window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [status]);
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [save]);
 
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
@@ -155,8 +169,8 @@ function Studio({ app, prompt, saved, state }: { app: Application; prompt: Essay
       </Link>
       <h1 className="text-[1.75rem] font-semibold leading-tight sm:text-4xl">Turn your experience into a strong answer.</h1>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-        <aside className="lg:sticky lg:top-6 lg:self-start">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+        <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
           <div className="card p-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">The prompt</p>
             <p className="mt-2 font-display text-lg leading-snug">“{prompt.question}”</p>
@@ -169,13 +183,13 @@ function Studio({ app, prompt, saved, state }: { app: Application; prompt: Essay
                 Couldn’t save. Retry
               </button>
             ) : (
-              statusText[status]
+              <span data-testid="save-status">{statusText[status]}</span>
             )}
-            <span className="text-muted">· Saved on this device</span>
+            <span className="text-muted">· on this device</span>
           </p>
         </aside>
 
-        <div>
+        <div className="min-w-0">
           <ol className="flex gap-1 overflow-x-auto pb-1" aria-label="Essay steps">
             {STAGES.map((s, i) => (
               <li key={s} className="shrink-0">
