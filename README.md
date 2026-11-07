@@ -66,7 +66,7 @@ This build runs **only** in on-device demo mode. The UI says "Demo mode — save
 ## Setup
 
 ```bash
-npm ci --legacy-peer-deps
+npm ci
 npm run dev
 ```
 
