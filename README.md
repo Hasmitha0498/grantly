@@ -79,23 +79,37 @@ No environment variables are required. `.env.example` lists the optional cloud v
 |---|---|
 | `npm run typecheck` | `tsc --noEmit` (strict) |
 | `npm run lint` | ESLint, zero warnings allowed |
-| `npm run test:run` | 86 Vitest unit tests across eligibility, evidence, finance, decision, actions, state machine, essay, repository, dates and storage |
+| `npm run test:run` | 225 Vitest tests: domain engines, repository, storage, and component interaction tests |
+| `npm run test:coverage` | Same tests with v8 coverage and enforced domain thresholds |
 | `npm run build` | Production build |
-| `npm run test:e2e` | 15 Playwright tests on the production build: full demo journey, profile→fit recompute, search/filter/bookmark, compare/priority/budget, idempotent start + submission, deep links/back/forward, onboarding validation + focus, follow-up timing, inert HTML injection, no overflow at 320/375/768/1024/1440px, axe on 10 routes |
+| `npm run test:e2e` | 17 Playwright tests (set `E2E_BASE_URL` to test a deployment) on the production build: full demo journey, profile→fit recompute, search/filter/bookmark, compare/priority/budget, idempotent start + submission, deep links/back/forward, onboarding validation + focus, follow-up timing, inert HTML injection, no overflow at 320/375/768/1024/1440px, axe on 10 routes |
 | `npm run test:a11y` | Only the axe test |
 
-## Verified results (7 Nov 2026)
+## Verified results (7 Nov 2026, 17:50 IST)
 
-- Local: typecheck, lint, 86/86 unit tests, build, 15/15 E2E and `npm audit --omit=dev` (0 vulnerabilities) all pass.
-- Production (https://grantly-snowy.vercel.app): 15/15 E2E pass with `E2E_BASE_URL=https://grantly-snowy.vercel.app npm run test:e2e`.
-- Lighthouse 12, default mobile emulation, single run from a local machine against production:
+| Check | Result |
+|---|---|
+| `npm ci` → `typecheck` → `lint` (0 warnings) → `build` | Pass |
+| `npm run test:coverage` | 225/225 pass (23 files: 131 domain/repository unit + 94 component interaction) |
+| Coverage, all instrumented `src/` (route wrappers included) | 89.9% statements · 85.1% branches · 84.9% functions · 92.2% lines |
+| Coverage, `src/domain` | 96.7% statements · 92.4% branches · 97.8% functions · 98.9% lines (thresholds enforced) |
+| Coverage, `src/repository` | 96.2% statements · 96.8% branches · 93.4% functions · 96.6% lines |
+| `npm run test:e2e`, local production build and live URL | 17/17 pass (including axe on 10 routes, keyboard and focus restore, overflow at 320–1440px, corrupted storage) |
+| `npm audit --omit=dev` | 0 vulnerabilities |
 
-| Page | Performance | Accessibility | Best practices | LCP | CLS | TBT |
-|---|---|---|---|---|---|---|
-| `/` | 98 | 100 | 100 | 2.4 s | 0 | 0 ms |
-| `/discover` | 99 | 100 | 100 | 2.0 s | 0 | 20 ms |
+Lighthouse 12, default mobile emulation, one lab run per page against production from a local machine. The browser was fresh, so personalised routes show their "set up your journey" state.
 
-INP is a field metric and was not measured. Screenshots are in `docs/screenshots/`.
+| Page | Perf | A11y | Best practices | FCP | LCP | CLS | TBT |
+|---|---|---|---|---|---|---|---|
+| `/` | 99 | 100 | 100 | 0.9 s | 2.0 s | 0 | 40 ms |
+| `/dashboard` | 99 | 100 | 100 | 0.8 s | 2.0 s | 0 | 40 ms |
+| `/discover` | 99 | 100 | 100 | 0.8 s | 2.0 s | 0 | 0 ms |
+| `/compare` | 100 | 100 | 100 | 0.8 s | 1.8 s | 0 | 20 ms |
+| `/applications` | 100 | 100 | 100 | 0.8 s | 1.8 s | 0 | 50 ms |
+| `/applications/[id]` | 99 | 100 | 100 | 0.8 s | 2.0 s | 0 | 80 ms |
+| Essay Studio | 99 | 100 | 100 | 0.8 s | 2.0 s | 0 | 70 ms |
+
+INP is a field metric and was not measured. A CI workflow (`.github/workflows/ci.yml`) is prepared, but pushing it requires a GitHub token with the `workflow` scope.
 
 ## Accessibility and security
 
