@@ -143,30 +143,33 @@ function TaskRow({ task, app, s, state }: { task: ApplicationTask; app: Applicat
               <PenLine aria-hidden="true" size={17} /> Work on essay
             </Link>
           ) : null}
-          <label className="sr-only" htmlFor={`st-${task.id}`}>
-            Status for {task.label}
-          </label>
-          <select
-            id={`st-${task.id}`}
-            className="input w-auto min-w-44"
-            value={task.status}
-            onChange={(e) => {
-              const v = e.target.value as TaskStatus;
-              if (v === 'complete' && essayEval && !essayEval.ready) {
-                actions.run(() => {
-                  throw new Error('Mark the essay ready in Essay Studio first — it needs a draft within the word limit.');
-                });
-                return;
-              }
-              actions.updateTask(task.id, { status: v }, v === 'complete' ? 'Step marked ready.' : 'Your progress was updated.');
-            }}
-          >
-            {(Object.keys(TASK_STATUS_LABEL) as TaskStatus[]).map((k) => (
-              <option key={k} value={k}>
-                {TASK_STATUS_LABEL[k]}
-              </option>
-            ))}
-          </select>
+          {isEssay ? (
+            // Essay readiness has one source of truth: Essay Studio (valid draft + student confirmation).
+            <span className="pill border border-line bg-canvas text-muted">
+              {TASK_STATUS_LABEL[task.status]} · set in Essay Studio
+            </span>
+          ) : (
+            <>
+            <label className="sr-only" htmlFor={`st-${task.id}`}>
+              Status for {task.label}
+            </label>
+            <select
+              id={`st-${task.id}`}
+              className="input w-auto min-w-44"
+              value={task.status}
+              onChange={(e) => {
+                const v = e.target.value as TaskStatus;
+                actions.updateTask(task.id, { status: v }, v === 'complete' ? 'Step marked ready.' : 'Your progress was updated.');
+              }}
+            >
+              {(Object.keys(TASK_STATUS_LABEL) as TaskStatus[]).map((k) => (
+                <option key={k} value={k}>
+                  {TASK_STATUS_LABEL[k]}
+                </option>
+              ))}
+            </select>
+            </>
+          )}
         </div>
       </div>
       {(thirdParty || task.status === 'waiting') && task.status !== 'complete' ? (

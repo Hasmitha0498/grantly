@@ -49,6 +49,8 @@ function Studio({ state }: { state: JourneyState & { profile: StudentProfile } }
     [state.compare, profile, scenario, state.applications],
   );
   const decision = useMemo(() => compareOptions(facts, priority), [facts, priority]);
+  // Shared by the desktop table and mobile cards; derived once per state change.
+  const rows = useMemo(() => rowsFor(facts, scenario), [facts, scenario]);
 
   if (state.compare.length < 2) {
     return (
@@ -91,7 +93,7 @@ function Studio({ state }: { state: JourneyState & { profile: StudentProfile } }
               </legend>
               <div className="mt-3 flex flex-wrap gap-2">
                 {PRIORITIES.map((p) => (
-                  <label key={p.value} className={`pill min-h-11 cursor-pointer border px-4 text-sm ${priority === p.value ? 'border-forest bg-forest text-white' : 'border-line bg-white text-ink'}`}>
+                  <label key={p.value} className={`pill min-h-11 cursor-pointer border px-4 text-sm focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-focus ${priority === p.value ? 'border-forest bg-forest text-white' : 'border-line bg-white text-ink'}`}>
                     <input type="radio" name="priority" value={p.value} className="sr-only" checked={priority === p.value} onChange={() => setPriority(p.value)} />
                     {p.label}
                   </label>
@@ -108,7 +110,7 @@ function Studio({ state }: { state: JourneyState & { profile: StudentProfile } }
                       ['confirmed', 'Based on confirmed funding'],
                     ] as const
                   ).map(([v, l]) => (
-                    <label key={v} className={`pill min-h-11 cursor-pointer border px-4 text-sm ${scenario === v ? 'border-forest bg-mint text-forest' : 'border-line bg-white text-ink'}`}>
+                    <label key={v} className={`pill min-h-11 cursor-pointer border px-4 text-sm focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-focus ${scenario === v ? 'border-forest bg-mint text-forest' : 'border-line bg-white text-ink'}`}>
                       <input type="radio" name="scenario" value={v} className="sr-only" checked={scenario === v} onChange={() => setScenario(v)} />
                       {l}
                     </label>
@@ -165,7 +167,7 @@ function Studio({ state }: { state: JourneyState & { profile: StudentProfile } }
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
-                  {rowsFor(facts).map((row) => (
+                  {rows.map((row) => (
                     <tr key={row.label}>
                       <th scope="row" className="px-6 py-3 font-semibold">
                         {row.label}
@@ -187,7 +189,7 @@ function Studio({ state }: { state: JourneyState & { profile: StudentProfile } }
                   <p className="font-semibold">{f.scholarship.shortTitle}</p>
                   <p className="text-sm text-muted">{short(f.program.universityName)}</p>
                   <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-                    {rowsFor(facts).map((row) => (
+                    {rows.map((row) => (
                       <div key={row.label} className="contents">
                         <dt className="text-muted">{row.label}</dt>
                         <dd className="text-right font-semibold">{row.values[i]}</dd>
@@ -242,10 +244,20 @@ function Studio({ state }: { state: JourneyState & { profile: StudentProfile } }
               <Lightbulb aria-hidden="true" size={16} /> Why this option fits your priority
             </p>
             {winner ? (
-              <p className="mt-2 font-display text-lg font-semibold">
-                {winner.scholarship.shortTitle} · {short(winner.program.universityName)}
-              </p>
-            ) : null}
+              <>
+                <p className="mt-2 font-display text-lg font-semibold">
+                  {winner.scholarship.shortTitle} · {short(winner.program.universityName)}
+                </p>
+                {winner.financial.kind === 'ok' ? (
+                  <p className="mt-1 text-sm text-muted">
+                    <span className="font-display text-2xl font-semibold text-forest">{formatMoney(winner.financial.remaining)}</span>{' '}
+                    left to pay {scenario === 'potential' ? 'if awarded' : 'with confirmed funding'}
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <p className="mt-2 font-display text-lg font-semibold">No clear winner on this priority</p>
+            )}
             <p className="mt-2 text-[0.95rem]">{decision.why}</p>
             <h2 className="mt-4 text-sm font-semibold uppercase tracking-wide text-muted">What you’re trading off</h2>
             <p className="mt-1 text-[0.95rem]">{decision.tradeoff}</p>
@@ -321,11 +333,17 @@ function money(f: OptionFacts, pick: 'full' | 'award' | 'remaining' | 'gap'): st
   return r.budgetGap === null ? 'Add a budget' : formatMoney(r.budgetGap);
 }
 
-function rowsFor(facts: OptionFacts[]): { label: string; values: React.ReactNode[] }[] {
+export const SCENARIO_LABELS: Record<Exclude<FundingScenario, 'no-award'>, { funding: string; remaining: string }> = {
+  potential: { funding: 'Potential funding', remaining: 'Remaining cost if awarded' },
+  confirmed: { funding: 'Confirmed funding', remaining: 'Remaining cost (confirmed funding)' },
+};
+
+export function rowsFor(facts: OptionFacts[], scenario: Exclude<FundingScenario, 'no-award'> = 'potential'): { label: string; values: React.ReactNode[] }[] {
+  const labels = SCENARIO_LABELS[scenario];
   return [
     { label: 'Full-program cost', values: facts.map((f) => money(f, 'full')) },
-    { label: 'Potential funding', values: facts.map((f) => money(f, 'award')) },
-    { label: 'Remaining cost if awarded', values: facts.map((f) => money(f, 'remaining')) },
+    { label: labels.funding, values: facts.map((f) => money(f, 'award')) },
+    { label: labels.remaining, values: facts.map((f) => money(f, 'remaining')) },
     { label: 'Current budget gap', values: facts.map((f) => money(f, 'gap')) },
     { label: 'Eligibility', values: facts.map((f) => <EligibilityBadge key={f.key} status={f.eligibility} />) },
     { label: 'Application work', values: facts.map((f) => `${f.effort} steps · ${ROUTE_LABEL[f.scholarship.applicationRoute]}`) },

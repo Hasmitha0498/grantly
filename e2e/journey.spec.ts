@@ -268,3 +268,19 @@ test('E2E-11b: keyboard-only — start demo, open next action, dialog Escape res
   await expect(page.getByRole('dialog')).toBeHidden();
   await expect(submit).toBeFocused();
 });
+
+test('Discover: invalid URL params are ignored; debounced search syncs URL and supports Back', async ({ page }) => {
+  await startDemo(page);
+  await page.goto('/discover?type=%3Cscript%3E&eligibility=maybe&sort=random&deadline=999');
+  await expect(page.getByText('9 opportunities')).toBeVisible();
+  await expect(page.getByLabel('Sort by')).toHaveValue('relevant');
+  await page.goto('/discover');
+  await page.getByLabel('Search scholarships or providers').pressSequentially('civic', { delay: 30 });
+  await expect(page.getByText('1 opportunity')).toBeVisible();
+  await expect(page).toHaveURL(/\/discover\?q=civic$/);
+  await page.getByRole('link', { name: 'Civic Scholars Award', exact: true }).click();
+  await expect(page).toHaveURL(/scholarships\/civic-scholars/);
+  await page.goBack();
+  await expect(page.getByLabel('Search scholarships or providers')).toHaveValue('civic');
+  await expect(page.getByText('1 opportunity')).toBeVisible();
+});

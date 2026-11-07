@@ -10,6 +10,12 @@ GRANTLY helps a final-year Indian undergraduate (or recent graduate) planning a 
 - Source: https://github.com/Hasmitha0498/grantly
 - Persistence: **Demo mode, saved on this device** (versioned `localStorage`). No account and no server.
 
+## Documentation
+
+[Architecture](docs/ARCHITECTURE.md) · [Product flows](docs/PRODUCT_FLOWS.md) · [Testing](docs/TESTING.md) · [Performance](docs/PERFORMANCE.md) · [Accessibility](docs/ACCESSIBILITY.md) · [Decisions](docs/DECISIONS.md)
+
+![GRANTLY dashboard](docs/screenshots/desktop-dashboard.png)
+
 ## The problem
 
 Funding information is scattered. Eligibility gets confused with competitiveness. Headline award amounts hide the real cost of a program. Deadlines, essays and recommender follow-ups live in different places. GRANTLY connects these into one flow: **profile → fit → decision → application → next action**.

@@ -35,14 +35,12 @@ describe('ApplicationWorkspace', () => {
     expect(task(`${LK}__supplement-form`).status).toBe('complete');
   });
 
-  it('refuses to mark the essay step ready before the essay is ready', async () => {
+  it('essay step status is read-only in the checklist and managed in Essay Studio', () => {
     seed();
-    const user = userEvent.setup();
     renderApp(<ApplicationWorkspace id={LK} />);
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Status for Write the community impact essay' }), 'Ready');
-    expect(screen.getByText(/Mark the essay ready/)).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Status for Write the community impact essay' })).toBeNull();
+    expect(screen.getByText('To do · set in Essay Studio')).toBeInTheDocument();
     expect(task(`${LK}__essay`).status).toBe('todo');
-    expect(screen.getByRole('combobox', { name: 'Status for Write the community impact essay' })).toHaveValue('todo');
     expect(screen.getByRole('link', { name: /Work on essay/ })).toHaveAttribute('href', `/applications/${encodeURIComponent(LK)}/essay/lk-impact`);
   });
 

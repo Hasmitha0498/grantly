@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, Scale, Search, SlidersHorizontal, X } from 'lucide-react';
 import { getProgram, programs, scholarships } from '@/data/demo-catalog';
 import { evaluateEligibility, formatMoney } from '@/domain/eligibility';
@@ -13,12 +13,12 @@ import { JourneyGate } from '@/components/shell/JourneyGate';
 import { Badge, DemoLabel, EligibilityBadge, PageHeader } from '@/components/ui/primitives';
 import { Dialog } from '@/components/ui/Dialog';
 import { FUNDING_TYPE_LABEL, ROUTE_LABEL, today } from '@/lib/format';
-import type { Eligibility, FundingType, JourneyState, Scholarship, StudentProfile } from '@/domain/types';
+import type { Eligibility, JourneyState, Scholarship, StudentProfile } from '@/domain/types';
 import { CompareButton, SaveButton } from './OpportunityActions';
+import { parseDiscoverParams, SEARCH_URL_DEBOUNCE_MS } from './discover-params';
 
 const ELIG_ORDER: Record<Eligibility, number> = { eligible: 0, 'needs-information': 1, unverified: 2, 'not-eligible': 3 };
 
-type Sort = 'relevant' | 'deadline' | 'funding';
 
 export function maxPotential(s: Scholarship): number | null {
   const values = s.programIds
@@ -48,16 +48,28 @@ function Explorer({ state }: { state: JourneyState & { profile: StudentProfile }
   const params = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const q = params.get('q') ?? '';
-  const type = (params.get('type') ?? '') as FundingType | '';
-  const elig = (params.get('eligibility') ?? '') as Eligibility | '';
-  const course = params.get('course') ?? '';
-  const deadline = params.get('deadline') ?? '';
-  const sort = (params.get('sort') ?? 'relevant') as Sort;
+  const { q, type, eligibility: elig, course, deadline, sort } = parseDiscoverParams(params);
+  // The visible query is local state so results update on every keystroke;
+  // the URL is synced after a short debounce to avoid a navigation per key.
   const [query, setQuery] = useState(q);
+  const [urlQuery, setUrlQuery] = useState(q);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  if (q !== urlQuery) {
+    // URL changed externally (back/forward, chip removal): adopt it.
+    setUrlQuery(q);
+    if (q !== query.trim()) setQuery(q);
+  }
+  // Latest params for delayed callbacks, so a debounced search sync never drops newer filters.
+  const paramsRef = useRef(params);
+  useEffect(() => {
+    paramsRef.current = params;
+  }, [params]);
+  useEffect(() => () => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+  }, []);
 
   const update = (patch: Record<string, string>) => {
-    const next = new URLSearchParams(params.toString());
+    const next = new URLSearchParams(paramsRef.current.toString());
     for (const [k, v] of Object.entries(patch)) {
       if (v) next.set(k, v);
       else next.delete(k);
@@ -70,7 +82,7 @@ function Explorer({ state }: { state: JourneyState & { profile: StudentProfile }
   const anchor = state.anchorAt ?? new Date().toISOString();
 
   const rows = useMemo(() => {
-    const needle = q.trim().toLowerCase();
+    const needle = query.trim().toLowerCase();
     const list = scholarships.map((s) => {
       const result = evaluateEligibility(state.profile, s);
       return { s, status: result.status, needsInfo: result.unknown.some((u) => u.missingField), closes: deadlineFor(s.id, anchor), potential: maxPotential(s) };
@@ -96,10 +108,10 @@ function Explorer({ state }: { state: JourneyState & { profile: StudentProfile }
     if (sort === 'deadline') sorted.sort((a, b) => (a.closes ?? '9999') .localeCompare(b.closes ?? '9999') || a.s.id.localeCompare(b.s.id));
     if (sort === 'funding') sorted.sort((a, b) => (b.potential ?? -1) - (a.potential ?? -1) || a.s.id.localeCompare(b.s.id));
     return sorted;
-  }, [q, type, elig, course, deadline, sort, state.profile, anchor, now]);
+  }, [query, type, elig, course, deadline, sort, state.profile, anchor, now]);
 
   const activeChips: { key: string; label: string }[] = [
-    q && { key: 'q', label: `“${q}”` },
+    query.trim() && { key: 'q', label: `“${query.trim()}”` },
     type && { key: 'type', label: FUNDING_TYPE_LABEL[type] },
     elig && { key: 'eligibility', label: { eligible: 'Meets demo criteria', 'not-eligible': 'Not eligible', 'needs-information': 'Needs information', unverified: 'Needs verification' }[elig] },
     course && { key: 'course', label: course },
@@ -107,6 +119,7 @@ function Explorer({ state }: { state: JourneyState & { profile: StudentProfile }
   ].filter(Boolean) as { key: string; label: string }[];
 
   const clearAll = () => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
     setQuery('');
     router.replace(pathname, { scroll: false });
   };
@@ -144,6 +157,7 @@ function Explorer({ state }: { state: JourneyState & { profile: StudentProfile }
           role="search"
           onSubmit={(e) => {
             e.preventDefault();
+            if (searchTimer.current) clearTimeout(searchTimer.current);
             update({ q: query.trim() });
           }}
           className="flex flex-col gap-3 sm:flex-row sm:items-end"
@@ -162,8 +176,10 @@ function Explorer({ state }: { state: JourneyState & { profile: StudentProfile }
                 maxLength={100}
                 value={query}
                 onChange={(e) => {
-                  setQuery(e.target.value);
-                  update({ q: e.target.value.trim() });
+                  const value = e.target.value;
+                  setQuery(value);
+                  if (searchTimer.current) clearTimeout(searchTimer.current);
+                  searchTimer.current = setTimeout(() => update({ q: value.trim() }), SEARCH_URL_DEBOUNCE_MS);
                 }}
               />
             </div>
@@ -195,7 +211,10 @@ function Explorer({ state }: { state: JourneyState & { profile: StudentProfile }
               type="button"
               className="pill border border-line bg-mint text-forest hover:bg-white"
               onClick={() => {
-                if (c.key === 'q') setQuery('');
+                if (c.key === 'q') {
+                  if (searchTimer.current) clearTimeout(searchTimer.current);
+                  setQuery('');
+                }
                 update({ [c.key]: '' });
               }}
               aria-label={`Remove filter ${c.label}`}

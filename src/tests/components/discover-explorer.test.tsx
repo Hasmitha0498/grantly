@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readStored, renderWithProviders, seedState } from './render';
@@ -64,9 +64,14 @@ describe('DiscoverExplorer', () => {
     seedState();
     const user = userEvent.setup();
     renderWithProviders(<DiscoverExplorer />);
+    const before = nav.replaced.length;
     await user.type(screen.getByRole('searchbox', { name: 'Search scholarships or providers' }), 'civic');
-    expect(nav.replaced.at(-1)).toBe('/discover?q=civic');
+    // Results update on every keystroke from local state, before any URL navigation.
     expect(screen.getByText('1 opportunity')).toBeInTheDocument();
+    expect(nav.replaced.length).toBe(before);
+    // The URL is synced once, after the debounce, with the final query.
+    await waitFor(() => expect(nav.replaced.at(-1)).toBe('/discover?q=civic'));
+    expect(nav.replaced.length).toBe(before + 1);
 
     await user.click(screen.getAllByRole('button', { name: 'Clear filters' })[0]!);
     expect(nav.replaced.at(-1)).toBe('/discover');
