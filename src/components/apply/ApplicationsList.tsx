@@ -60,7 +60,7 @@ function List({ state }: { state: JourneyState & { profile: StudentProfile } }) 
         <EmptyState icon={<FileText aria-hidden="true" />} title="No applications yet. Save an opportunity and start preparing when you’re ready." action={{ href: '/discover', label: 'Discover scholarships' }} />
       ) : (
         <>
-          <div role="tablist" aria-label="Filter applications" className="mb-5 flex gap-2 overflow-x-auto pb-1">
+          <div role="tablist" aria-label="Filter applications" className="mb-5 flex flex-wrap gap-2">
             {TABS.map((t) => (
               <button
                 key={t}

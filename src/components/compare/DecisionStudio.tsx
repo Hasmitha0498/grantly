@@ -81,9 +81,10 @@ function Studio({ state }: { state: JourneyState & { profile: StudentProfile } }
       <PageHeader title="Choose what works for you." subtitle="The biggest award isn’t always the most affordable path." />
       <SelectionStrip facts={facts} onRemove={(f) => actions.setCompare(f.option, false)} />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-6">
-          <section className="card p-5 sm:p-6" aria-labelledby="pri">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {/* On small screens the recommendation follows the priority picker, before the long table. */}
+        <div className="contents lg:block lg:min-w-0 lg:space-y-6">
+          <section className="card order-1 p-5 sm:p-6" aria-labelledby="pri">
             <fieldset>
               <legend id="pri" className="font-display text-xl font-semibold">
                 What matters most right now?
@@ -139,7 +140,7 @@ function Studio({ state }: { state: JourneyState & { profile: StudentProfile } }
             </div>
           </section>
 
-          <section aria-labelledby="facts" className="card overflow-hidden">
+          <section aria-labelledby="facts" className="card order-3 overflow-hidden">
             <h2 id="facts" className="px-5 pt-5 font-display text-xl font-semibold sm:px-6">
               Side by side
             </h2>
@@ -185,7 +186,7 @@ function Studio({ state }: { state: JourneyState & { profile: StudentProfile } }
                 <li key={f.key} className="rounded-xl border border-line p-4">
                   <p className="font-semibold">{f.scholarship.shortTitle}</p>
                   <p className="text-sm text-muted">{short(f.program.universityName)}</p>
-                  <dl className="mt-3 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-sm">
+                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
                     {rowsFor(facts).map((row) => (
                       <div key={row.label} className="contents">
                         <dt className="text-muted">{row.label}</dt>
@@ -198,7 +199,7 @@ function Studio({ state }: { state: JourneyState & { profile: StudentProfile } }
             </ul>
           </section>
 
-          <section aria-labelledby="bars" className="card p-5 sm:p-6">
+          <section aria-labelledby="bars" className="card order-4 p-5 sm:p-6">
             <h2 id="bars" className="font-display text-xl font-semibold">
               Where the money goes
             </h2>
@@ -235,7 +236,7 @@ function Studio({ state }: { state: JourneyState & { profile: StudentProfile } }
           </section>
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start" aria-label="Recommendation">
+        <aside className="order-2 space-y-4 lg:order-none lg:sticky lg:top-6 lg:self-start" aria-label="Recommendation">
           <section className="card border-forest/30 p-5" aria-live="polite">
             <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-accent">
               <Lightbulb aria-hidden="true" size={16} /> Why this option fits your priority
@@ -287,9 +288,11 @@ function SelectionStrip({ facts, onRemove }: { facts: OptionFacts[]; onRemove: (
   return (
     <ul className="mb-6 flex flex-wrap gap-2" aria-label="Options in comparison">
       {facts.map((f) => (
-        <li key={f.key} className="flex items-center gap-2 rounded-full border border-line bg-white py-1 pl-4 pr-1 text-sm">
-          <span className="font-semibold">{f.scholarship.shortTitle}</span>
-          <span className="text-muted">· {short(f.program.universityName)}</span>
+        <li key={f.key} className="flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border border-line bg-white py-1.5 pl-4 pr-1 text-sm">
+          <span>
+            <span className="font-semibold">{f.scholarship.shortTitle}</span>
+            <span className="text-muted"> · {short(f.program.universityName)}</span>
+          </span>
           <EligibilityBadge status={f.eligibility} />
           <button type="button" className="rounded-full p-2 hover:bg-canvas" aria-label={`Remove ${f.scholarship.shortTitle} from compare`} onClick={() => onRemove(f)}>
             <X aria-hidden="true" size={16} />
