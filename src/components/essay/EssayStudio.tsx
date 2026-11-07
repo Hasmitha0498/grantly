@@ -10,6 +10,7 @@ import { ConflictError } from '@/repository/journey-core';
 import { useJourneyActions } from '@/repository/use-journey-actions';
 import { JourneyGate } from '@/components/shell/JourneyGate';
 import { Dialog } from '@/components/ui/Dialog';
+import { useToast } from '@/components/ui/Toast';
 import { StoryBank } from './StoryBank';
 
 const STAGES = ['Understand', 'My stories', 'Outline', 'Draft', 'Review'] as const;
@@ -62,6 +63,7 @@ function bufferOf(d: EssayDraft | null): Buffer {
 
 function Studio({ app, prompt, saved, state }: { app: Application; prompt: EssayPrompt; saved: EssayDraft | null; state: JourneyState & { profile: StudentProfile } }) {
   const actions = useJourneyActions();
+  const { notify } = useToast();
   const [stage, setStage] = useState<Stage>(saved?.body ? 'Draft' : 'Understand');
   const [buffer, setBuffer] = useState<Buffer>(() => bufferOf(saved));
   const [status, setStatus] = useState<SaveStatus>(saved ? 'saved' : 'idle');
@@ -77,7 +79,6 @@ function Studio({ app, prompt, saved, state }: { app: Application; prompt: Essay
   }, [buffer]);
 
   const evaluation = evaluateEssayDraft(buffer.body, prompt.wordLimit, saved?.userMarkedReady ?? false);
-  const essayTask = state.tasks.find((t) => t.applicationId === app.id && t.essayPromptId === prompt.id);
 
   const save = useCallback(
     (opts: { markReady?: boolean; force?: boolean } = {}) => {
@@ -154,9 +155,7 @@ function Studio({ app, prompt, saved, state }: { app: Application; prompt: Essay
 
   const markReady = () => {
     if (!evaluation.canMarkReady || !ownWords) return;
-    if (save({ markReady: true }) && essayTask) {
-      actions.updateTask(essayTask.id, { status: 'complete' }, 'Essay marked ready. Your next action has been updated.');
-    }
+    if (save({ markReady: true })) notify('Essay marked ready. Your next action has been updated.');
     setReadyOpen(false);
   };
 
@@ -317,7 +316,7 @@ function Studio({ app, prompt, saved, state }: { app: Application; prompt: Essay
                       type="button"
                       className="btn btn-secondary"
                       onClick={() => {
-                        if (save({ markReady: false }) && essayTask) actions.updateTask(essayTask.id, { status: 'todo' }, 'Essay moved back to drafting.');
+                        if (save({ markReady: false })) notify('Essay moved back to drafting.');
                       }}
                     >
                       Keep working on it

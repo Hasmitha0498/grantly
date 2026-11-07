@@ -91,6 +91,7 @@ export function buildFacts(
         budgetUsd: profile.fullProgramBudgetUsd,
         scenario,
         confirmedAwardUsd: app?.status === 'awarded' ? app.awardConfirmedUsd : null,
+        awardRecorded: app?.status === 'awarded',
       }),
       effort: effortScore(scholarship),
       fit: fitScore(program, profile),
@@ -191,7 +192,7 @@ export function compareOptions(facts: OptionFacts[], priority: Priority): Decisi
     why = `${label(winner)} is the only option here that you aren’t ruled out of.`;
   } else if (priority === 'lowest-cost') {
     const diff = (runnerUp.v as number) - (winner.financial.kind === 'ok' ? winner.financial.remaining : 0);
-    why = `If awarded, ${label(winner)} leaves ${formatMoney(remainingOf(winner) ?? 0)} to pay over the full program — ${formatMoney(diff)} less than ${label(runnerUp.f)}.`;
+    why = `${winner.financial.kind === 'ok' && winner.financial.scenario === 'confirmed' ? 'Based on confirmed funding' : 'If awarded'}, ${label(winner)} leaves ${formatMoney(remainingOf(winner) ?? 0)} to pay over the full program — ${formatMoney(diff)} less than ${label(runnerUp.f)}.`;
   } else if (priority === 'least-effort') {
     why = `${label(winner)} needs about ${winner.effort} checklist steps versus ${runnerUp.v} for ${label(runnerUp.f)}${winner.scholarship.applicationRoute === 'automatic-via-admission' ? ', and it’s considered automatically with your admission' : ''}.`;
   } else if (priority === 'program-fit') {

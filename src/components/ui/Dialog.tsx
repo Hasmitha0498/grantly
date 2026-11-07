@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import * as RD from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 
@@ -16,6 +17,9 @@ export function Dialog({
   description?: string;
   children: React.ReactNode;
 }) {
+  // Dialogs are opened programmatically (no Radix Trigger), so remember the
+  // element that had focus and return focus to it on close.
+  const returnFocus = useRef<HTMLElement | null>(null);
   return (
     <RD.Root open={open} onOpenChange={onOpenChange}>
       <RD.Portal>
@@ -23,6 +27,17 @@ export function Dialog({
         <RD.Content
           className="animate-rise fixed inset-x-3 bottom-3 z-50 max-h-[85dvh] overflow-y-auto rounded-2xl bg-surface p-6 shadow-xl sm:inset-x-auto sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:w-[min(92vw,520px)] sm:-translate-x-1/2 sm:-translate-y-1/2"
           {...(description ? {} : { 'aria-describedby': undefined })}
+          onOpenAutoFocus={() => {
+            const active = document.activeElement;
+            returnFocus.current = active instanceof HTMLElement && active !== document.body ? active : null;
+          }}
+          onCloseAutoFocus={(e) => {
+            const target = returnFocus.current;
+            if (target && target.isConnected) {
+              e.preventDefault();
+              target.focus();
+            }
+          }}
         >
           <div className="flex items-start justify-between gap-4">
             <RD.Title className="font-display text-xl font-semibold">{title}</RD.Title>

@@ -236,3 +236,35 @@ test('@a11y axe: representative routes have no serious/critical violations', asy
   }
   expect(found).toEqual([]);
 });
+
+test('security: corrupted local storage recovers safely with an honest notice', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.setItem('grantly:journey:v1', '{"version":1,"profile":"<script>alert(1)</script>"'));
+  await page.goto('/dashboard');
+  await expect(page.getByRole('alert').filter({ hasText: 'We couldn’t read the progress saved on this device' })).toBeVisible();
+  await page.getByRole('button', { name: 'Explore a demo journey' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Good to see you, Aisha.' })).toBeVisible();
+});
+
+test('E2E-11b: keyboard-only — start demo, open next action, dialog Escape restores focus', async ({ page }) => {
+  await page.goto('/');
+  const demo = page.getByRole('button', { name: 'Explore a demo journey' });
+  for (let i = 0; i < 25 && !(await demo.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press('Tab');
+  await expect(demo).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/dashboard/);
+  const finish = page.getByRole('link', { name: /Finish essay/ });
+  for (let i = 0; i < 30 && !(await finish.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press('Tab');
+  await expect(finish).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { level: 1, name: 'Turn your experience into a strong answer.' })).toBeVisible();
+
+  await page.goto('/applications/lakeshore-global__prog-lakeshore-mscs');
+  const submit = page.getByRole('button', { name: 'Mark sample submission complete' });
+  await submit.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(submit).toBeFocused();
+});

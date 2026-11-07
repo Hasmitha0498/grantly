@@ -144,7 +144,7 @@ function Studio({ state }: { state: JourneyState & { profile: StudentProfile } }
               Side by side
             </h2>
             <p className="px-5 text-sm text-muted sm:px-6">
-              {scenario === 'potential' ? 'If the award is received — none of these awards is confirmed.' : 'Based on confirmed funding you’ve recorded. Unrecorded awards count as $0.'}
+              {scenario === 'potential' ? 'If the award is received — none of these awards is confirmed.' : 'Based on confirmed funding you’ve recorded. Options without a recorded award show their full cost.'}
             </p>
             {/* Desktop table */}
             <div className="mt-4 hidden md:block">
@@ -313,7 +313,7 @@ function money(f: OptionFacts, pick: 'full' | 'award' | 'remaining' | 'gap'): st
     return 'Not comparable yet';
   }
   if (pick === 'full') return formatMoney(r.fullProgramCost);
-  if (pick === 'award') return formatMoney(r.appliedAward);
+  if (pick === 'award') return r.confirmedSource === 'none-recorded' ? 'No confirmed award recorded' : formatMoney(r.appliedAward);
   if (pick === 'remaining') return formatMoney(r.remaining);
   return r.budgetGap === null ? 'Add a budget' : formatMoney(r.budgetGap);
 }

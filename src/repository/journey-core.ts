@@ -7,6 +7,7 @@ import { getProgram, getScholarship, isValidPairing } from '@/data/demo-catalog'
 import { demoProfile } from '@/data/demo-profile';
 import { canTransition, TransitionError } from '@/domain/application-state';
 import { addDays, toDateOnly } from '@/domain/date';
+import { evaluateEssayDraft } from '@/domain/essay';
 import { profileInputSchema, storySchema } from '@/domain/schemas';
 import type {
   Application,
@@ -197,14 +198,23 @@ export function saveEssay(state: JourneyState, input: EssayInput, expectedRevisi
   const current = state.essays.find((e) => e.applicationId === input.applicationId && e.promptId === input.promptId);
   const currentRevision = current?.revision ?? 0;
   if (current && expectedRevision !== currentRevision) throw new ConflictError(current);
+  // Readiness requires a non-empty draft within the limit AND explicit confirmation.
+  const ready = evaluateEssayDraft(input.body, prompt.wordLimit, input.userMarkedReady).ready;
   const draft: EssayDraft = {
     ...input,
+    userMarkedReady: ready,
     id: current?.id ?? `${input.applicationId}__${input.promptId}`,
     revision: currentRevision + 1,
     updatedAt: now.toISOString(),
   };
   const essays = current ? state.essays.map((e) => (e.id === draft.id ? draft : e)) : [...state.essays, draft];
-  return { state: { ...state, essays }, draft };
+  // Keep the linked checklist task consistent with the draft in the same write.
+  const tasks = state.tasks.map((t) => {
+    if (t.applicationId !== input.applicationId || t.essayPromptId !== input.promptId) return t;
+    if (ready) return { ...t, status: 'complete' as const };
+    return t.status === 'complete' ? { ...t, status: 'todo' as const } : t;
+  });
+  return { state: { ...state, essays, tasks }, draft };
 }
 
 /** Demo seed: schedule computed once and persisted as absolute dates. */

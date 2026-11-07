@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
 import { LoadingState } from '@/components/ui/primitives';
-import { useJourney } from '@/repository/local-store';
+import { useJourney, wasRecovered } from '@/repository/local-store';
 import { useJourneyActions } from '@/repository/use-journey-actions';
 import type { JourneyState, StudentProfile } from '@/domain/types';
 
@@ -24,6 +24,11 @@ export function JourneyGate({
         <div className="mx-auto mb-3 w-fit rounded-full bg-mint p-3 text-forest">
           <Sparkles aria-hidden="true" />
         </div>
+        {wasRecovered() ? (
+          <p role="alert" className="mb-4 rounded-lg bg-warning-bg px-3 py-2 text-sm font-semibold text-warning">
+            We couldn’t read the progress saved on this device, so we started fresh.
+          </p>
+        ) : null}
         <h1 className="font-display text-2xl font-semibold">Let’s set up your funding journey first.</h1>
         <p className="mt-2 text-muted">Create a short profile, or explore with a fictional sample student.</p>
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">

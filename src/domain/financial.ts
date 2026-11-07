@@ -11,6 +11,8 @@ export type FinancialResult =
       appliedAward: number;
       remaining: number;
       budgetGap: number | null;
+      /** Confirmed scenario only: whether the student recorded an award amount. */
+      confirmedSource?: 'recorded' | 'none-recorded';
     }
   | { kind: 'insufficient'; scenario: FundingScenario; fullProgramCost: number | null; missing: string[] }
   | { kind: 'not-applicable'; scenario: FundingScenario; reason: string };
@@ -70,6 +72,8 @@ export interface FinancialInput {
   scenario: FundingScenario;
   /** Student-recorded awarded amount; used only in the confirmed scenario. */
   confirmedAwardUsd?: number | null;
+  /** True when the student recorded an award (amount may still be unknown). */
+  awardRecorded?: boolean;
 }
 
 export function calculateFinancialImpact(input: FinancialInput): FinancialResult {
@@ -89,8 +93,26 @@ export function calculateFinancialImpact(input: FinancialInput): FinancialResult
 
   const missing = [...total.missing];
   let nominal: number | null;
+  let confirmedSource: 'recorded' | 'none-recorded' | undefined;
   if (scenario === 'confirmed') {
-    nominal = input.confirmedAwardUsd ?? 0;
+    const amount = input.confirmedAwardUsd;
+    if (typeof amount === 'number') {
+      if (!Number.isFinite(amount) || amount < 0) {
+        nominal = null;
+        missing.push('Valid awarded amount');
+      } else {
+        nominal = amount;
+        confirmedSource = 'recorded';
+      }
+    } else if (input.awardRecorded) {
+      // An award was recorded but its amount is unknown: never assume $0.
+      nominal = null;
+      missing.push('Awarded amount (add it on the application)');
+    } else {
+      // No award recorded: confirmed funding is genuinely nothing yet.
+      nominal = 0;
+      confirmedSource = 'none-recorded';
+    }
   } else {
     const n = normalizeAward(scholarship.award, program);
     nominal = n.amount;
@@ -110,7 +132,16 @@ export function calculateFinancialImpact(input: FinancialInput): FinancialResult
   const coveredCosts = scholarship.award.coveredCategories.reduce((sum, c) => sum + (cost(program, c) ?? 0), 0);
   const applied = Math.min(nominal, coveredCosts);
   const remaining = Math.max(0, total.total - applied);
-  return { kind: 'ok', scenario, fullProgramCost: total.total, nominalAward: nominal, appliedAward: applied, remaining, budgetGap: gap(remaining) };
+  return {
+    kind: 'ok',
+    scenario,
+    fullProgramCost: total.total,
+    nominalAward: nominal,
+    appliedAward: applied,
+    remaining,
+    budgetGap: gap(remaining),
+    ...(confirmedSource ? { confirmedSource } : {}),
+  };
 }
 
 /**
