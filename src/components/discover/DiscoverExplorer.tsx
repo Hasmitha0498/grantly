@@ -61,20 +61,35 @@ function Explorer({ state }: { state: JourneyState & { profile: StudentProfile }
   }
   // Latest params for delayed callbacks, so a debounced search sync never drops newer filters.
   const paramsRef = useRef(params);
+  // Query string we last requested; router.replace is async, so back-to-back
+  // updates must build on it until the router reports that URL.
+  const pendingQs = useRef<string | null>(null);
   useEffect(() => {
     paramsRef.current = params;
+    if (pendingQs.current === params.toString()) pendingQs.current = null;
   }, [params]);
   useEffect(() => () => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
   }, []);
 
-  const update = (patch: Record<string, string>) => {
-    const next = new URLSearchParams(paramsRef.current.toString());
+  const update = (input: Record<string, string>) => {
+    let patch = input;
+    // A filter/sort change while a search sync is pending carries the current
+    // query in the same URL update, so the two writes can never race.
+    if (searchTimer.current && !('q' in input)) {
+      clearTimeout(searchTimer.current);
+      searchTimer.current = null;
+      patch = { q: query.trim(), ...input };
+    }
+    const next = new URLSearchParams(pendingQs.current ?? paramsRef.current.toString());
     for (const [k, v] of Object.entries(patch)) {
       if (v) next.set(k, v);
       else next.delete(k);
     }
     const qs = next.toString();
+    // Only track a pending URL when it differs from the current one; an identical
+    // replace produces no params change that would clear it.
+    pendingQs.current = qs === paramsRef.current.toString() ? null : qs;
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
@@ -121,6 +136,7 @@ function Explorer({ state }: { state: JourneyState & { profile: StudentProfile }
   const clearAll = () => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     setQuery('');
+    pendingQs.current = paramsRef.current.toString() === '' ? null : '';
     router.replace(pathname, { scroll: false });
   };
 
@@ -179,7 +195,10 @@ function Explorer({ state }: { state: JourneyState & { profile: StudentProfile }
                   const value = e.target.value;
                   setQuery(value);
                   if (searchTimer.current) clearTimeout(searchTimer.current);
-                  searchTimer.current = setTimeout(() => update({ q: value.trim() }), SEARCH_URL_DEBOUNCE_MS);
+                  searchTimer.current = setTimeout(() => {
+                    searchTimer.current = null;
+                    update({ q: value.trim() });
+                  }, SEARCH_URL_DEBOUNCE_MS);
                 }}
               />
             </div>

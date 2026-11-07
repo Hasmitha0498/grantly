@@ -284,3 +284,25 @@ test('Discover: invalid URL params are ignored; debounced search syncs URL and s
   await expect(page.getByLabel('Search scholarships or providers')).toHaveValue('civic');
   await expect(page.getByText('1 opportunity')).toBeVisible();
 });
+
+test('Discover: search plus back-to-back filter/sort changes inside the debounce window all survive', async ({ page }) => {
+  await startDemo(page);
+  await page.goto('/discover');
+  const box = page.getByLabel('Search scholarships or providers');
+  await box.pressSequentially('award', { delay: 0 });
+  await page.getByLabel('Funding type', { exact: true }).selectOption('merit');
+  await page.getByLabel('Sort by', { exact: true }).selectOption('funding');
+  await page.getByLabel('Deadline', { exact: true }).selectOption('open');
+  await expect.poll(() => {
+    const u = new URL(page.url()).searchParams;
+    return [u.get('q'), u.get('type'), u.get('sort'), u.get('deadline')];
+  }).toEqual(['award', 'merit', 'funding', 'open']);
+  const url = page.url();
+  await page.locator('li.card h2 a').first().click();
+  await page.waitForURL(/scholarships\//);
+  await page.goBack();
+  await expect(page).toHaveURL(url);
+  await expect(box).toHaveValue('award');
+  await expect(page.getByLabel('Funding type', { exact: true })).toHaveValue('merit');
+  await expect(page.getByLabel('Sort by', { exact: true })).toHaveValue('funding');
+});
